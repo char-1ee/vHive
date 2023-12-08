@@ -29,6 +29,9 @@ import (
 
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 	"runtime"
 
 	ctrdlog "github.com/containerd/containerd/log"
@@ -142,6 +145,26 @@ func main() {
 		go setupFirecrackerCRI()
 		go orchServe()
 		fwdServe()
+
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	
+		// Set up a channel to indicate when to stop the daemon
+		done := make(chan bool, 1)
+		go func() {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+					// Daemon's main logic here
+				}
+			}
+		}()	
+
+		<-sigs  // wait for termination logic
+		fmt.Println("Signal received, shutting down...")
+		done <- true
 	case "gvisor":
 		setupGVisorCRI()
 	}
