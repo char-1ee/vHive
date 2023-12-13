@@ -120,6 +120,7 @@ func (m *MemoryManager) Activate(vmID string) error {
 	logger := log.WithFields(log.Fields{"vmID": vmID})
 
 	logger.Debug("Activating instance in the memory manager")
+	logger.Debug("TEST: creating epoller to serve page fault for VM")
 
 	var (
 		ok      bool
@@ -129,6 +130,7 @@ func (m *MemoryManager) Activate(vmID string) error {
 
 	m.Lock()
 
+	logger.Debug("TEST: fetch the snapshot state from instances map by vmID: ", vmID);
 	state, ok = m.instances[vmID]
 	if !ok {
 		m.Unlock()
@@ -155,6 +157,7 @@ func (m *MemoryManager) Activate(vmID string) error {
 
 	state.setupStateOnActivate()
 
+	logger.Debug("TEST: starts polling upf")
 	go state.pollUserPageFaults(readyCh)
 
 	<-readyCh
