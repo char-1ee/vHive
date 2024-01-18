@@ -45,6 +45,32 @@ test-all: test-subdirs test-orch
 
 test-orch: test test-man
 
+trace:
+    firecracker \
+        --log-path=/path/to/firecracker.log \
+        --log-level=Debug \
+        --metrics-path=/path/to/firecracker_metrics.log \
+        --kernel /path/to/kernel/vmlinux \
+        --root-drive /path/to/rootfs.ext4 \
+        --kernel-opts="console=ttyS0 noapic reboot=k panic=1 pci=off" &
+
+    sleep 10
+
+	# SSH into VM?
+    # ssh -i /path/to/your/private/key -o "StrictHostKeyChecking no" \
+    #     -o "UserKnownHostsFile /dev/null" \
+    #     -o "LogLevel ERROR" \
+    #     -o "ConnectTimeout=10" \
+    #     root@localhost 'nohup dmesg > /path/to/dmesg.log 2>&1 &'
+
+    # Capture Firecracker metrics in the background
+    curl -sS http://localhost:8888/metrics > /path/to/firecracker_metrics.log &
+
+test-pg-fault: trace
+    ./scripts/clean_fcctr.sh
+    sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log.err
+    sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -short $(EXTRAGOARGS) -args $(WITHSNAPSHOTS)
+
 test:
 	./scripts/clean_fcctr.sh
 	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log.err &
